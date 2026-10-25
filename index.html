@@ -140,6 +140,7 @@ tr.row{cursor:pointer} tr.row:hover td{background:#f7fbfb}
   <button class="btn" style="width:100%;margin-top:8px" id="lgBtn">Se connecter</button>
   <p id="lgErr" style="color:var(--red);font-size:13px"></p>
   <a href="#" id="lgReset" style="font-size:13px;color:var(--brand)">Mot de passe oublié ?</a>
+  <p id="verLogin" style="color:var(--muted);font-size:11px;margin:14px 0 0;text-align:center"></p>
 </section>
 
 <div id="app" class="hidden">
@@ -238,6 +239,7 @@ tr.row{cursor:pointer} tr.row:hover td{background:#f7fbfb}
     <div class="labels-sheet" id="sheet"></div>
   </section>
 </main>
+<p id="verInfo" style="text-align:center;color:var(--muted);font-size:12px;margin:0 0 90px"></p>
 <button class="fab" id="fab" title="Ajouter un appareil">+</button>
 </div>
 
@@ -260,6 +262,9 @@ const firebaseConfig = {
   messagingSenderId: "693431131099",
   appId: "1:693431131099:web:ee4c23778db935dd19e5fe"
 };
+
+/* ---------- Version (à incrémenter à chaque mise à jour) ---------- */
+const APP_VERSION = "1.4 — 25/10/2026 (photo directe)";
 
 /* ---------- Référentiels ---------- */
 const CATS = {
@@ -558,9 +563,15 @@ function openEdit(id, duplicate){
       ${f("coutRemplacement","Coût de remplacement estimé (€)","number")}
       <div><label>Renouvellement prévu</label><input id="e_ech" disabled></div>
       <div class="sec">Photo et remarques</div>
-      <div class="full"><label>Photo</label><input type="file" accept="image/*" capture="environment" id="e_photo">
-        <img id="e_prev" class="photo-prev ${editPhoto?"":"hidden"}" src="${editPhoto||""}" alt="">
-        ${editPhoto?'<button class="btn ghost small" style="margin-top:6px" onclick="editPhoto=null;$(\'#e_prev\').classList.add(\'hidden\')">Retirer la photo</button>':""}</div>
+      <div class="full"><label>Photo</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn" onclick="$('#e_photoCam').click()">📷 Prendre une photo</button>
+          <button type="button" class="btn ghost" onclick="$('#e_photoFile').click()">🖼️ Choisir une image</button>
+          <button type="button" class="btn ghost ${editPhoto?"":"hidden"}" id="e_photoDel" onclick="editPhoto=null;$('#e_prev').classList.add('hidden');this.classList.add('hidden')">Retirer</button>
+        </div>
+        <input type="file" accept="image/*" capture="environment" id="e_photoCam" class="hidden">
+        <input type="file" accept="image/*" id="e_photoFile" class="hidden">
+        <img id="e_prev" class="photo-prev ${editPhoto?"":"hidden"}" src="${editPhoto||""}" alt=""></div>
       <div class="full"><label>Remarques</label><textarea id="e_remarques" rows="3">${esc(i.remarques||"")}</textarea></div>
     </div>
     <div class="actions">
@@ -579,10 +590,11 @@ function openEdit(id, duplicate){
   };
   $("#e_categorie").addEventListener("input",upd);
   ["e_acquisition","e_finContrat","e_dateAchat","e_dureeVie"].forEach(k=>$("#"+k).addEventListener("input",upd)); upd();
-  $("#e_photo").addEventListener("change", async ev=>{
-    const file = ev.target.files[0]; if(!file) return;
+  ["#e_photoCam","#e_photoFile"].forEach(sel=>$(sel).addEventListener("change", async ev=>{
+    const file = ev.target.files[0]; ev.target.value=""; if(!file) return;
     editPhoto = await compress(file); const p=$("#e_prev"); p.src=editPhoto; p.classList.remove("hidden");
-  });
+    $("#e_photoDel").classList.remove("hidden");
+  }));
   $("#btnSave").onclick = ()=>saveEdit(i);
 }
 
@@ -1091,6 +1103,10 @@ function checkHash(){
   if(m && m[1]!==hashDone && items.some(x=>x.id===m[1])){ hashDone=m[1]; openView(m[1]); }
 }
 window.addEventListener("hashchange", ()=>{ hashDone=""; checkHash(); });
+
+$("#verInfo").textContent = "Version " + APP_VERSION;
+$("#verLogin").textContent = "Version " + APP_VERSION;
+document.title = "Parc informatique – CSAmblève";
 
 /* ---------- Démarrage ---------- */
 if (DEMO){

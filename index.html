@@ -102,6 +102,18 @@ tr.row{cursor:pointer} tr.row:hover td{background:#f7fbfb}
 .warn ul{margin:6px 0 0;padding-left:18px}
 .chips span{display:inline-block;background:var(--brand-2);color:var(--brand);border-radius:20px;padding:2px 9px;margin:2px;font-size:12px}
 .chips.off span{background:#eef1f1;color:var(--muted)}
+.inline-field{display:flex;gap:6px}
+.inline-field input{flex:1;min-width:0}
+.icon-btn{flex:none;border:1px solid var(--line);background:#fff;color:var(--brand);border-radius:9px;padding:0 10px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
+.overlay{position:fixed;inset:0;background:rgba(10,20,20,.75);z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto}
+.overlay .box{background:#fff;border-radius:14px;max-width:480px;width:100%;padding:16px}
+#bcReader{width:100%;border-radius:10px;overflow:hidden;background:#000;min-height:120px}
+.cands{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cands button{border:1px solid var(--brand);background:var(--brand-2);color:var(--brand);border-radius:9px;padding:9px 12px;font-family:ui-monospace,Menlo,monospace;font-size:15px;cursor:pointer}
+.cands button.top{background:var(--brand);color:#fff}
+.ocr-img{max-width:100%;max-height:180px;border-radius:9px;display:block;margin:8px auto}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--brand-2);border-top-color:var(--brand);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
 #reader{width:100%;max-width:420px;margin:0 auto}
 .empty{text-align:center;color:var(--muted);padding:40px 10px}
 @media print{
@@ -201,7 +213,7 @@ tr.row{cursor:pointer} tr.row:hover td{background:#f7fbfb}
   <!-- SCANNER -->
   <section id="tab-scan" class="hidden">
     <div class="card" style="text-align:center">
-      <p style="margin-top:0">Vise l'étiquette QR collée sur l'appareil.</p>
+      <p style="margin-top:0">Vise l'étiquette QR du centre <b>ou</b> le code-barres du fabricant (n° de série).</p>
       <div id="reader"></div>
       <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
         <button class="btn" id="btnScanStart">Démarrer la caméra</button>
@@ -230,6 +242,8 @@ tr.row{cursor:pointer} tr.row:hover td{background:#f7fbfb}
 </div>
 
 <div class="modal hidden" id="modal"><div class="box" id="modalBox"></div></div>
+<div class="overlay hidden" id="overlay"><div class="box" id="overlayBox"></div></div>
+<input type="file" id="ocrFile" accept="image/*" capture="environment" class="hidden">
 
 <script>
 /* ============================================================
@@ -516,17 +530,22 @@ function openEdit(id, duplicate){
       <div><label>N° d'inventaire</label><input id="e_numero" class="mono" value="${esc(i.numero||"")}" placeholder="Auto si vide"></div>
       <div><label>Statut</label><select id="e_statut">${opt(STATUTS,i.statut)}</select></div>
       ${f("marque","Marque")}${f("modele","Modèle")}
-      ${f("serie","N° de série")}
+      <div><label>N° de série</label><div class="inline-field"><input id="e_serie" value="${esc(i.serie??"")}" autocapitalize="characters" autocomplete="off">
+        <button type="button" class="icon-btn" onclick="scanInto('e_serie')" title="Scanner le code-barres de l'étiquette">▮▯▮ Scan</button>
+        <button type="button" class="icon-btn" onclick="ocrInto('e_serie')" title="Photographier l'étiquette et lire le texte">📷 Photo</button></div></div>
       <div><label>Système d'exploitation</label><select id="e_os">${opt(OS,i.os||"")}</select></div>
       ${f("local","Local / bureau")}${f("utilisateur","Utilisateur / détenteur")}
       ${f("quantite","Quantité (lot de souris, claviers…)","number")}
       <div class="sec tel-only">Téléphonie</div>
       <div class="tel-only">${f("numeroAppel","Numéro d'appel","tel")}</div>
-      <div class="tel-only">${f("imei","IMEI","text")}</div>
+      <div class="tel-only"><label>IMEI <small style="font-weight:400">(composer *#06#)</small></label><div class="inline-field"><input id="e_imei" value="${esc(i.imei??"")}" inputmode="numeric" autocomplete="off">
+        <button type="button" class="icon-btn" onclick="scanInto('e_imei')" title="Scanner le code-barres (boîte du téléphone)">▮▯▮ Scan</button>
+        <button type="button" class="icon-btn" onclick="ocrInto('e_imei')" title="Photographier l'écran *#06#">📷</button></div></div>
       <div class="tel-only"><label>Opérateur</label><select id="e_operateur">${opt(OPERATEURS,i.operateur||"")}</select></div>
       <div class="tel-only">${f("abonnement","Type d'abonnement")}</div>
       <div class="tel-only">${f("coutAbonnement","Coût mensuel de l'abonnement (€)","number")}</div>
-      <div class="tel-only">${f("sim","N° de carte SIM (ICCID)")}</div>
+      <div class="tel-only"><label>N° de carte SIM (ICCID)</label><div class="inline-field"><input id="e_sim" value="${esc(i.sim??"")}" inputmode="numeric" autocomplete="off">
+        <button type="button" class="icon-btn" onclick="scanInto('e_sim')" title="Scanner le code-barres du support de la carte SIM">▮▯▮ Scan</button></div></div>
       <div class="tel-only">${f("pin","Code PIN / PUK","text")}</div>
       <div class="tel-only">${f("debutAbonnement","Fin d'engagement de l'abonnement","date")}</div>
       <div class="sec">Achat et cycle de vie</div>
@@ -887,11 +906,17 @@ let scanner = null;
 $("#btnScanStart").onclick = async ()=>{
   scanner = scanner || new Html5Qrcode("reader");
   try{
-    await scanner.start({facingMode:"environment"},{fps:10,qrbox:230}, txt=>{
+    await scanner.start({facingMode:"environment"}, SCAN_CFG, txt=>{
       const m = txt.match(/#f=([\w-]+)/);
       stopScan();
-      if(m) openView(m[1]);
-      else { switchTab("inv"); $("#fSearch").value = txt; renderInv(); }
+      if(m) return openView(m[1]);
+      const cands = serialCandidates(txt);
+      const hit = items.find(x=>cands.some(c=>[x.serie,x.imei,x.sim,x.numero].some(v=>v && normKey(v)===normKey(c))));
+      if (hit) return openView(hit.id);
+      openModal(`<h3>Appareil inconnu</h3><p>Code lu : <span class="mono">${esc(txt)}</span></p>
+        <p style="color:var(--muted);font-size:13px">Aucune fiche ne porte ce numéro. Tu peux en créer une avec ce n° de série.</p>
+        <div class="cands">${cands.map((c,k)=>`<button class="${k?"":"top"}" onclick="newWithSerial('${esc(c)}')">${esc(c)}</button>`).join("")}</div>
+        <div class="actions"><button class="btn ghost" onclick="closeModal()">Fermer</button></div>`);
     });
     $("#btnScanStart").classList.add("hidden"); $("#btnScanStop").classList.remove("hidden");
   }catch(e){ alert("Impossible d'accéder à la caméra : "+e); }
@@ -901,6 +926,146 @@ async function stopScan(){
   $("#btnScanStart").classList.remove("hidden"); $("#btnScanStop").classList.add("hidden");
 }
 $("#btnScanStop").onclick = stopScan;
+
+/* ---------- Lecture code-barres et photo (OCR) ---------- */
+const F = window.Html5QrcodeSupportedFormats || {};
+const SCAN_CFG = {
+  fps: 12,
+  qrbox: (w,h)=>({width: Math.floor(Math.min(w*0.9, 420)), height: Math.floor(Math.min(h*0.45, 180))}),
+  formatsToSupport: [F.QR_CODE,F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.ITF,F.DATA_MATRIX,F.CODABAR].filter(x=>x!==undefined),
+  experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+  aspectRatio: 1.333
+};
+
+// Nettoie un code lu et propose les variantes plausibles du n° de série
+function serialCandidates(raw){
+  let t = String(raw||"").trim().replace(/[\u0000-\u001f]/g,"");
+  const out = [];
+  const add = v => { v = (v||"").trim().replace(/^[:#\-\s]+/,""); if (v.length>=4 && !out.includes(v)) out.push(v); };
+  const pref = t.match(/^(?:S\/?N|SN|SER(?:IAL)?(?:\s*NO)?|SERVICE\s*TAG|\(S\))\s*[:#.]?\s*(.+)$/i);
+  if (pref) add(pref[1]);
+  // Lenovo : 1S + type machine + n° de série (8 derniers caractères)
+  if (/^1S[A-Z0-9]{10,}$/i.test(t)){ add(t.slice(-8)); add(t.slice(2)); }
+  // ICCID SIM : 19-20 chiffres commençant par 89
+  if (/^89\d{17,18}F?$/i.test(t)) add(t.replace(/F$/i,""));
+  add(t);
+  return out;
+}
+
+// Extrait du texte OCR les candidats au n° de série, les plus probables d'abord
+function ocrCandidates(text, field){
+  const lines = text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const scored = new Map();
+  const push = (v,score)=>{
+    v = v.replace(/[^A-Za-z0-9\-]/g,"").replace(/^-+|-+$/g,"").toUpperCase();
+    if (v.length<5 || v.length>24) return;
+    if (field==="e_imei"){ if(!/^\d{14,16}$/.test(v.replace(/-/g,""))) return; v=v.replace(/-/g,""); }
+    else if (!/\d/.test(v)) return;
+    if (/^(19|20)\d{2}$/.test(v)) return;
+    scored.set(v, Math.max(scored.get(v)||0, score));
+  };
+  const KEY = /(S\s*\/\s*N|\bSN\b|SERIAL|SER\.?\s*NO|SERVICE\s*TAG|N[°O]\s*DE\s*S[ÉE]RIE|IMEI)/i;
+  lines.forEach((l,ix)=>{
+    const k = l.match(KEY);
+    if (k){
+      const after = l.slice(k.index + k[0].length).replace(/^[\s:#.\-]+/,"");
+      const tok = after.split(/\s+/)[0]; if (tok) push(tok, 100);
+      if (!tok && lines[ix+1]) push(lines[ix+1].split(/\s+/)[0], 90);
+    }
+    l.split(/[\s,;|]+/).forEach(w=>{
+      const c = w.replace(/[^A-Za-z0-9\-]/g,"");
+      const hasL = /[A-Za-z]/.test(c), hasD = /\d/.test(c);
+      if (hasL && hasD) push(c, 40 + (c.length>=7 && c.length<=12 ? 10 : 0));
+      else if (hasD && c.length>=8) push(c, 20);
+    });
+  });
+  return [...scored.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,8);
+}
+
+function openOverlay(html){ $("#overlayBox").innerHTML = html; $("#overlay").classList.remove("hidden"); }
+async function closeOverlay(){ await stopBc(); $("#overlay").classList.add("hidden"); }
+function fillField(id, v){
+  const el = $("#"+id); if(!el) return;
+  el.value = v; el.dispatchEvent(new Event("input"));
+  el.style.background = "var(--green-bg)"; setTimeout(()=>el.style.background="",1200);
+  closeOverlay();
+}
+
+let bc = null;
+async function stopBc(){ try{ if(bc && bc.isScanning) await bc.stop(); }catch(e){} }
+async function scanInto(fieldId){
+  openOverlay(`<h3 style="margin:0 0 8px">Scanner le code-barres</h3>
+    <p style="margin:0 0 10px;font-size:13px;color:var(--muted)">Vise le code-barres <b>sous</b> la mention S/N, Serial ou Service Tag. Rapproche-toi jusqu'à ce qu'il soit net.</p>
+    <div id="bcReader"></div><div id="bcRes"></div>
+    <div class="actions"><button class="btn ghost" onclick="ocrInto('${fieldId}')">📷 Lire une photo à la place</button><button class="btn ghost" onclick="closeOverlay()">Annuler</button></div>`);
+  bc = new Html5Qrcode("bcReader", {verbose:false});
+  try{
+    await bc.start({facingMode:"environment"}, SCAN_CFG, async txt=>{
+      await stopBc();
+      if (navigator.vibrate) navigator.vibrate(80);
+      const c = serialCandidates(txt);
+      $("#bcRes").innerHTML = `<p style="margin:12px 0 0;font-size:13px">Code lu — touche la bonne valeur :</p>
+        <div class="cands">${c.map((v,k)=>`<button class="${k?"":"top"}" onclick="fillField('${fieldId}','${esc(v)}')">${esc(v)}</button>`).join("")}</div>
+        <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Ce n'est pas le n° de série (l'étiquette en a souvent plusieurs) ? <a href="#" onclick="event.preventDefault();scanInto('${fieldId}')">Scanner un autre code</a></p>`;
+      $("#bcReader").style.display="none";
+    });
+  }catch(e){
+    $("#bcReader").innerHTML = `<p style="color:#fff;padding:14px;font-size:13px">Caméra indisponible (${esc(String(e).slice(0,80))}). Vérifie que le navigateur a l'autorisation d'utiliser l'appareil photo, ou utilise « Lire une photo ».</p>`;
+  }
+}
+
+let ocrTarget = null, tessLoading = null;
+function loadTesseract(){
+  if (window.Tesseract) return Promise.resolve();
+  if (tessLoading) return tessLoading;
+  tessLoading = new Promise((res,rej)=>{
+    const sc = document.createElement("script");
+    sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+    sc.onload = res; sc.onerror = ()=>{ tessLoading=null; rej(new Error("chargement impossible (connexion ?)")); };
+    document.head.appendChild(sc);
+  });
+  return tessLoading;
+}
+function ocrInto(fieldId){ ocrTarget = fieldId; stopBc(); loadTesseract().catch(()=>{}); $("#ocrFile").click(); }
+$("#ocrFile").addEventListener("change", async ev=>{
+  const file = ev.target.files[0]; ev.target.value=""; if(!file || !ocrTarget) return;
+  const fieldId = ocrTarget;
+  const img = await prepOcr(file);
+  openOverlay(`<h3 style="margin:0 0 6px">Lecture de l'étiquette</h3><img class="ocr-img" src="${img}" alt="">
+    <div id="ocrRes"><p><span class="spin"></span><span id="ocrMsg">Préparation…</span></p></div>
+    <div class="actions"><button class="btn ghost" onclick="ocrInto('${fieldId}')">Reprendre une photo</button><button class="btn ghost" onclick="closeOverlay()">Annuler</button></div>`);
+  try{
+    await loadTesseract();
+    $("#ocrMsg").textContent = "Lecture du texte… (la première fois peut prendre 10-20 s)";
+    const r = await Tesseract.recognize(img, "eng", { logger: m=>{ if(m.status==="recognizing text" && $("#ocrMsg")) $("#ocrMsg").textContent = `Lecture du texte… ${Math.round(m.progress*100)} %`; } });
+    const c = ocrCandidates(r.data.text||"", fieldId);
+    $("#ocrRes").innerHTML = c.length
+      ? `<p style="margin:6px 0 0;font-size:13px">Touche le numéro correct (tu pourras encore le corriger) :</p>
+         <div class="cands">${c.map((v,k)=>`<button class="${k?"":"top"}" onclick="fillField('${fieldId}','${esc(v)}')">${esc(v)}</button>`).join("")}</div>
+         <p style="font-size:12px;color:var(--orange);margin:10px 0 0">⚠ Vérifie à l'œil : la lecture confond parfois 0/O, 1/I, 8/B, 5/S.</p>`
+      : `<p style="color:var(--orange)">Aucun numéro reconnu. Rapproche-toi, évite les reflets et cadre seulement la zone du n° de série.</p>`;
+  }catch(e){
+    $("#ocrRes").innerHTML = `<p style="color:var(--red)">Lecture impossible : ${esc(e.message||e)}</p>`;
+  }
+});
+// Réduit, passe en niveaux de gris et renforce le contraste pour l'OCR
+function prepOcr(file){
+  return new Promise(res=>{
+    const r = new FileReader(), im = new Image();
+    r.onload = ()=>{ im.src = r.result; };
+    im.onload = ()=>{
+      const max = 1800, k = Math.min(1, max/Math.max(im.width, im.height));
+      const c = document.createElement("canvas"); c.width = im.width*k; c.height = im.height*k;
+      const x = c.getContext("2d"); x.drawImage(im,0,0,c.width,c.height);
+      const d = x.getImageData(0,0,c.width,c.height), p = d.data;
+      for (let q=0;q<p.length;q+=4){ let g = .299*p[q]+.587*p[q+1]+.114*p[q+2]; g = Math.max(0,Math.min(255,(g-128)*1.6+128)); p[q]=p[q+1]=p[q+2]=g; }
+      x.putImageData(d,0,0); res(c.toDataURL("image/jpeg",0.9));
+    };
+    r.readAsDataURL(file);
+  });
+}
+function newWithSerial(v){ closeModal(); openEdit(null); setTimeout(()=>{ const el=$("#e_serie"); if(el){ el.value=v; } },50); }
+$("#overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeOverlay(); });
 
 /* ---------- Navigation ---------- */
 function switchTab(t){

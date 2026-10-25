@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Parc informatique – CSAmblève</title>
 <meta name="theme-color" content="#1f5fa8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Parc info">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -264,7 +271,7 @@ const firebaseConfig = {
 };
 
 /* ---------- Version (à incrémenter à chaque mise à jour) ---------- */
-const APP_VERSION = "1.5 — 25/10/2026 (thème bleu)";
+const APP_VERSION = "1.6 — 25/10/2026 (installable)";
 
 /* ---------- Référentiels ---------- */
 const CATS = {
@@ -1107,6 +1114,8 @@ window.addEventListener("hashchange", ()=>{ hashDone=""; checkHash(); });
 $("#verInfo").textContent = "Version " + APP_VERSION;
 $("#verLogin").textContent = "Version " + APP_VERSION;
 document.title = "Parc informatique – CSAmblève";
+
+if ("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 
 /* ---------- Démarrage ---------- */
 if (DEMO){

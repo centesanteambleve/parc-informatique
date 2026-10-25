@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Parc informatique – CSAmblève</title>
+<meta name="theme-color" content="#0f6e6e">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#f4f6f6; --card:#fff; --ink:#1d2a2a; --muted:#647373; --line:#dfe6e6;
+  --brand:#0f6e6e; --brand-2:#e3f1f0; --red:#c0392b; --red-bg:#fbeaea;
+  --orange:#c56a00; --orange-bg:#fff2e0; --green:#2e7d4f; --green-bg:#e6f4ec;
+  --radius:12px; --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px}
+button,input,select,textarea{font:inherit}
+.hidden{display:none!important}
+header{background:var(--brand);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+header h1{font-size:17px;margin:0;font-weight:600;flex:1}
+header small{opacity:.8;font-size:12px}
+.sync{font-size:12px;background:rgba(255,255,255,.15);padding:4px 9px;border-radius:20px;white-space:nowrap}
+nav.tabs{display:flex;gap:4px;background:var(--card);border-bottom:1px solid var(--line);padding:0 12px;position:sticky;top:52px;z-index:19;overflow-x:auto}
+nav.tabs button{border:0;background:none;padding:13px 14px;color:var(--muted);font-weight:500;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+main{max-width:1150px;margin:0 auto;padding:16px 16px 100px}
+.banner{background:var(--orange-bg);color:var(--orange);padding:10px 14px;border-radius:var(--radius);margin-bottom:14px;font-size:13px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.kpi .n{font-size:28px;font-weight:700}
+.kpi .l{color:var(--muted);font-size:13px}
+.kpi.red .n{color:var(--red)} .kpi.orange .n{color:var(--orange)}
+h2{font-size:16px;margin:22px 0 10px}
+.two{grid-template-columns:1fr 1fr} @media(max-width:800px){.two{grid-template-columns:1fr}}
+.bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
+.bar .y{width:44px;font-weight:600}
+.bar .t{flex:1;background:var(--brand-2);border-radius:6px;height:22px;position:relative;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--brand);border-radius:6px}
+.bar .v{width:110px;text-align:right;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar input,.toolbar select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.toolbar input{flex:1;min-width:180px}
+.btn{border:0;border-radius:9px;padding:9px 14px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--line)}
+.btn.danger{background:var(--red)}
+.btn.small{padding:6px 10px;font-size:13px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;background:#fafcfc;cursor:pointer;user-select:none}
+tr.row{cursor:pointer} tr.row:hover td{background:#f7fbfb}
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-red{background:var(--red-bg);color:var(--red)} .p-orange{background:var(--orange-bg);color:var(--orange)}
+.p-green{background:var(--green-bg);color:var(--green)} .p-grey{background:#eef1f1;color:var(--muted)}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.mobile-list{display:none}
+@media(max-width:720px){
+  table.desk{display:none} .mobile-list{display:grid;gap:10px}
+  .item{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;display:flex;gap:12px;align-items:center}
+  .item img,.item .ph{width:48px;height:48px;border-radius:8px;object-fit:cover;background:var(--brand-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .item .tx{flex:1;min-width:0} .item .tx b{display:block;font-size:14px}
+  .item .tx span{color:var(--muted);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+.fab{position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;border:0;background:var(--brand);color:#fff;font-size:30px;box-shadow:0 6px 18px rgba(15,110,110,.35);cursor:pointer;z-index:30}
+.modal{position:fixed;inset:0;background:rgba(20,30,30,.45);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:24px 12px}
+.modal .box{background:var(--card);border-radius:14px;max-width:760px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+.modal h3{margin:0 0 4px;font-size:18px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.form .full{grid-column:1/-1}
+@media(max-width:600px){.form{grid-template-columns:1fr}}
+.form label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.form input,.form select,.form textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.form fieldset{grid-column:1/-1;border:0;border-top:1px solid var(--line);padding:12px 0 0;margin:4px 0 0;display:contents}
+.sec{grid-column:1/-1;font-weight:700;color:var(--brand);font-size:13px;text-transform:uppercase;letter-spacing:.04em;margin-top:8px;border-top:1px solid var(--line);padding-top:12px}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.actions .left{margin-right:auto}
+.photo-prev{max-width:100%;max-height:200px;border-radius:10px;display:block;margin-top:8px}
+.view-head{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.view-head img{width:140px;height:140px;object-fit:cover;border-radius:12px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 18px;margin-top:14px}
+.kv div{font-size:14px} .kv small{display:block;color:var(--muted);font-size:12px}
+.hist{margin-top:10px;border-left:2px solid var(--line);padding-left:14px}
+.hist div{margin:8px 0;font-size:13px} .hist small{color:var(--muted)}
+#login{max-width:380px;margin:70px auto}
+#login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;margin:6px 0}
+.labels-sheet{display:grid;grid-template-columns:repeat(3,70mm);grid-auto-rows:37mm;gap:0;background:#fff;width:210mm;padding:4mm 0;margin-top:14px;box-shadow:var(--shadow)}
+.lbl{display:flex;align-items:center;gap:3mm;padding:2mm 3mm;border:1px dashed #ccc;overflow:hidden}
+.lbl .qr{flex:none;width:28mm;height:28mm} .lbl .qr img,.lbl .qr canvas{width:28mm!important;height:28mm!important}
+.lbl .t{font-size:9pt;line-height:1.25} .lbl .t b{font-size:11pt;display:block}
+.lbl .t small{font-size:7pt;color:#555}
+.prev-wrap{overflow-x:auto;max-height:260px;margin-top:10px;border:1px solid var(--line);border-radius:9px}
+.prev-wrap table{box-shadow:none;border-radius:0;font-size:12px}
+.prev-wrap td,.prev-wrap th{padding:6px 8px;font-size:12px;white-space:nowrap}
+.warn{background:var(--orange-bg);color:var(--orange);border-radius:9px;padding:10px 12px;font-size:13px;margin-top:10px}
+.warn ul{margin:6px 0 0;padding-left:18px}
+.chips span{display:inline-block;background:var(--brand-2);color:var(--brand);border-radius:20px;padding:2px 9px;margin:2px;font-size:12px}
+.chips.off span{background:#eef1f1;color:var(--muted)}
+#reader{width:100%;max-width:420px;margin:0 auto}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+@media print{
+  body *{visibility:hidden} .labels-sheet,.labels-sheet *{visibility:visible}
+  .labels-sheet{position:absolute;left:0;top:0;box-shadow:none;padding:0;margin:0}
+  .lbl{border:0} @page{size:A4;margin:13mm 0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Parc informatique <small id="hdrSub">CSAmblève · CSR</small></h1>
+  <span class="sync" id="sync">…</span>
+  <button class="btn small ghost hidden" id="btnLogout" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">Déconnexion</button>
+</header>
+
+<!-- Connexion -->
+<section id="login" class="card hidden">
+  <h3 style="margin-top:0">Connexion</h3>
+  <p style="color:var(--muted);font-size:13px">Accès réservé aux personnes autorisées.</p>
+  <input id="lgEmail" type="email" placeholder="Adresse e-mail" autocomplete="username">
+  <input id="lgPass" type="password" placeholder="Mot de passe" autocomplete="current-password">
+  <button class="btn" style="width:100%;margin-top:8px" id="lgBtn">Se connecter</button>
+  <p id="lgErr" style="color:var(--red);font-size:13px"></p>
+  <a href="#" id="lgReset" style="font-size:13px;color:var(--brand)">Mot de passe oublié ?</a>
+</section>
+
+<div id="app" class="hidden">
+<nav class="tabs">
+  <button data-tab="dash" class="on">Tableau de bord</button>
+  <button data-tab="inv">Inventaire</button>
+  <button data-tab="scan">Scanner</button>
+  <button data-tab="lab">Étiquettes</button>
+</nav>
+
+<main>
+  <div id="demoBanner" class="banner hidden">Mode démonstration : les données restent sur cet appareil. Renseigne la configuration Firebase dans le fichier pour synchroniser téléphone et ordinateur.</div>
+
+  <!-- TABLEAU DE BORD -->
+  <section id="tab-dash">
+    <div class="grid kpis">
+      <div class="card kpi"><div class="n" id="kTotal">0</div><div class="l">Appareils en service</div></div>
+      <div class="card kpi red"><div class="n" id="kLate">0</div><div class="l">Renouvellement dépassé</div></div>
+      <div class="card kpi orange"><div class="n" id="kSoon">0</div><div class="l">À renouveler dans 12 mois</div></div>
+      <div class="card kpi red"><div class="n" id="kPanne">0</div><div class="l">En panne / réparation</div></div>
+      <div class="card kpi orange"><div class="n" id="kW10">0</div><div class="l">Ordinateurs encore sous Windows 10</div></div>
+      <div class="card kpi"><div class="n" id="kNoDate">0</div><div class="l">Sans date d'achat</div></div>
+    </div>
+    <div class="grid two">
+      <div>
+        <h2>Budget de renouvellement prévu</h2>
+        <div class="card" id="budget"></div>
+      </div>
+      <div>
+        <h2>Répartition par catégorie</h2>
+        <div class="card" id="byCat"></div>
+      </div>
+    </div>
+    <h2>Téléphones portables du CSA <small id="telTot" style="color:var(--muted);font-weight:400"></small></h2>
+    <div id="telTable"></div>
+    <h2>Prochains renouvellements</h2>
+    <div id="nextList"></div>
+  </section>
+
+  <!-- INVENTAIRE -->
+  <section id="tab-inv" class="hidden">
+    <div class="toolbar">
+      <input id="fSearch" placeholder="Rechercher (n°, modèle, série, utilisateur, local, n° d'appel, SIM…)">
+      <select id="fCat"><option value="">Toutes catégories</option></select>
+      <select id="fSite"><option value="">Tous sites</option></select>
+      <select id="fStatut"><option value="">Tous statuts</option></select>
+      <select id="fEch">
+        <option value="">Toutes échéances</option>
+        <option value="late">Dépassée</option>
+        <option value="soon">Dans 12 mois</option>
+        <option value="ok">OK</option>
+        <option value="unk">Inconnue</option>
+      </select>
+      <button class="btn ghost" id="btnExport">Exporter Excel</button>
+      <button class="btn ghost" id="btnImport">Importer Excel</button>
+      <button class="btn ghost" id="btnTemplate" title="Télécharger un fichier Excel vierge au bon format">Modèle vide</button>
+      <input type="file" id="fileImport" accept=".xlsx,.xls,.csv,.ods" class="hidden">
+    </div>
+    <table class="desk">
+      <thead><tr>
+        <th data-s="numero">N°</th><th data-s="categorie">Catégorie</th><th data-s="modele">Marque / modèle</th>
+        <th data-s="site">Site · local</th><th data-s="utilisateur">Utilisateur</th>
+        <th data-s="dateAchat">Achat</th><th data-s="_ech">Renouvellement</th><th data-s="statut">Statut</th>
+      </tr></thead>
+      <tbody id="invBody"></tbody>
+    </table>
+    <div class="mobile-list" id="invMobile"></div>
+    <p id="invCount" style="color:var(--muted);font-size:13px"></p>
+  </section>
+
+  <!-- SCANNER -->
+  <section id="tab-scan" class="hidden">
+    <div class="card" style="text-align:center">
+      <p style="margin-top:0">Vise l'étiquette QR collée sur l'appareil.</p>
+      <div id="reader"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
+        <button class="btn" id="btnScanStart">Démarrer la caméra</button>
+        <button class="btn ghost hidden" id="btnScanStop">Arrêter</button>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:0">Astuce : l'appareil photo du téléphone ouvre aussi directement la fiche.</p>
+    </div>
+  </section>
+
+  <!-- ÉTIQUETTES -->
+  <section id="tab-lab" class="hidden">
+    <div class="toolbar">
+      <select id="lSite"><option value="">Tous sites</option></select>
+      <select id="lCat"><option value="">Toutes catégories</option></select>
+      <select id="lWhich">
+        <option value="all">Tous les appareils</option>
+        <option value="new">Créés ces 7 derniers jours</option>
+      </select>
+      <button class="btn" onclick="window.print()">Imprimer</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px">Format A4 : 3 × 8 étiquettes de 70 × 37 mm (type Avery 3474). Les appareils réformés ne sont pas repris.</p>
+    <div class="labels-sheet" id="sheet"></div>
+  </section>
+</main>
+<button class="fab" id="fab" title="Ajouter un appareil">+</button>
+</div>
+
+<div class="modal hidden" id="modal"><div class="box" id="modalBox"></div></div>
+
+<script>
+/* ============================================================
+   CONFIGURATION FIREBASE
+   Remplace les valeurs ci-dessous par celles de ton projet
+   (Console Firebase > Paramètres du projet > Vos applications > Web).
+   Tant que apiKey vaut "A_REMPLIR", l'application tourne en mode démo.
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDsQysUgvV_7e2e_8Csf2XSjmwwPC7P-3w",
+  authDomain: "parc-informatique-6ba47.firebaseapp.com",
+  projectId: "parc-informatique-6ba47",
+  storageBucket: "parc-informatique-6ba47.firebasestorage.app",
+  messagingSenderId: "693431131099",
+  appId: "1:693431131099:web:ee4c23778db935dd19e5fe"
+};
+
+/* ---------- Référentiels ---------- */
+const CATS = {
+  "Ordinateur portable":"PCP","Ordinateur de bureau":"PCF","Écran":"ECR","Clavier":"CLA","Souris":"SOU",
+  "Imprimante":"IMP","Téléphone portable":"GSM","Autre":"AUT"
+};
+const CAT_ICON = {"Ordinateur portable":"💻","Ordinateur de bureau":"🖥️","Écran":"🖵","Clavier":"⌨️","Souris":"🖱️","Imprimante":"🖨️","Téléphone portable":"📱","Autre":"📦"};
+const TEL = "Téléphone portable";
+const OPERATEURS = ["","Proximus","Orange","Base / Telenet","Mobile Vikings","Autre"];
+const SITES = {"CSAmblève (Aywaille)":"CSA","CSR (Comblain-au-Pont)":"CSR"};
+const STATUTS = ["En service","En panne","En réparation","En stock","Réformé"];
+const ACQ = ["Achat","Leasing","Location"];
+const OS = ["","Windows 11","Windows 10","macOS","Linux","Autre"];
+const HIST_TYPES = ["Panne","Réparation","Changement d'utilisateur","Déplacement","Mise à jour","Remarque"];
+
+/* ---------- Utilitaires ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtD = d => d ? new Date(d+"T00:00:00").toLocaleDateString("fr-BE") : "—";
+const fmtE = n => (n||n===0) && n!=="" ? Number(n).toLocaleString("fr-BE",{style:"currency",currency:"EUR",maximumFractionDigits:0}) : "—";
+const todayISO = () => new Date().toISOString().slice(0,10);
+const fill = (sel, arr, keep) => { const el=$(sel); arr.forEach(v=>{const o=document.createElement("option");o.value=o.textContent=v;el.appendChild(o);}); };
+
+function echeance(it){
+  if (it.acquisition && it.acquisition!=="Achat" && it.finContrat) return it.finContrat;
+  if (!it.dateAchat) return "";
+  const d = new Date(it.dateAchat+"T00:00:00");
+  d.setFullYear(d.getFullYear() + (Number(it.dureeVie)||5));
+  return d.toISOString().slice(0,10);
+}
+function echState(it){
+  const e = echeance(it);
+  if (!e) return "unk";
+  const now = new Date(), d = new Date(e+"T00:00:00");
+  if (d < now) return "late";
+  const in12 = new Date(); in12.setFullYear(in12.getFullYear()+1);
+  return d <= in12 ? "soon" : "ok";
+}
+function echPill(it){
+  const s = echState(it), e = echeance(it);
+  if (it.statut==="Réformé") return '<span class="pill p-grey">Réformé</span>';
+  if (s==="unk") return '<span class="pill p-grey">Inconnue</span>';
+  const cls = {late:"p-red",soon:"p-orange",ok:"p-green"}[s];
+  return `<span class="pill ${cls}">${fmtD(e)}</span>`;
+}
+function statPill(s){
+  const cls = {"En service":"p-green","En panne":"p-red","En réparation":"p-orange","En stock":"p-grey","Réformé":"p-grey"}[s]||"p-grey";
+  return `<span class="pill ${cls}">${esc(s||"—")}</span>`;
+}
+const active = it => it.statut!=="Réformé";
+
+/* ---------- Stockage (Firebase ou démo locale) ---------- */
+let items = [], currentUser = "démo", unsub = null;
+const DEMO = firebaseConfig.apiKey === "A_REMPLIR";
+let db, auth;
+
+function setSync(t){ $("#sync").textContent = t; }
+
+const store = DEMO ? {
+  start(){
+    try { items = JSON.parse(localStorage.getItem("parc-demo")||"null"); } catch(e){ items=null; }
+    if (!items){ items = demoData(); this.persist(); }
+    setSync("Démo locale"); render();
+  },
+  persist(){ try{ localStorage.setItem("parc-demo", JSON.stringify(items)); }catch(e){} },
+  async save(it){
+    if (!it.id){ it.id = "d"+Date.now(); items.push(it); }
+    else items = items.map(x=>x.id===it.id?it:x);
+    this.persist(); render(); return it.id;
+  },
+  async remove(id){ items = items.filter(x=>x.id!==id); this.persist(); render(); },
+  async saveMany(list){
+    list.forEach((it,n)=>{ if(!it.id){ it.id="d"+Date.now()+"_"+n; items.push(it); } else items = items.map(x=>x.id===it.id?it:x); });
+    this.persist(); render();
+  }
+} : {
+  start(){
+    setSync("Connexion…");
+    unsub = db.collection("materiel").onSnapshot(snap=>{
+      items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      setSync(snap.metadata.hasPendingWrites ? "Envoi…" : "Synchronisé ✓");
+      render(); checkHash();
+    }, err=>{ setSync("Erreur ⚠"); alert("Erreur de synchronisation : "+err.message); });
+  },
+  async save(it){
+    const {id, ...data} = it;
+    if (id){ await db.collection("materiel").doc(id).set(data); return id; }
+    const ref = await db.collection("materiel").add(data); return ref.id;
+  },
+  async remove(id){ await db.collection("materiel").doc(id).delete(); },
+  async saveMany(list){
+    const batch = db.batch();
+    list.forEach(it=>{ const {id, ...data} = it; const ref = id ? db.collection("materiel").doc(id) : db.collection("materiel").doc(); batch.set(ref, data); });
+    await batch.commit();
+  }
+};
+
+function demoData(){
+  const y = n => { const d=new Date(); d.setFullYear(d.getFullYear()-n); return d.toISOString().slice(0,10); };
+  const base = (o)=>({quantite:1,dureeVie:5,acquisition:"Achat",statut:"En service",historique:[{date:todayISO(),type:"Création",texte:"Fiche créée",par:"démo"}],...o});
+  return [
+    base({id:"d7",numero:"CSA-GSM-001",categorie:"Téléphone portable",marque:"Samsung",modele:"Galaxy A55",serie:"R5CX12AB34",imei:"351234567890123",site:"CSAmblève (Aywaille)",utilisateur:"Michel Noël",dateAchat:y(1.5),prix:420,coutRemplacement:450,numeroAppel:"0470 12 34 56",operateur:"Proximus",abonnement:"Mobile Business Medium",coutAbonnement:25,sim:"8932 0012 3456 7890 123"}),
+    base({id:"d1",numero:"CSA-PCP-001",categorie:"Ordinateur portable",marque:"Lenovo",modele:"ThinkPad E14",serie:"PF3XA12",site:"CSAmblève (Aywaille)",local:"Accueil",utilisateur:"Accueil 1",dateAchat:y(5.3),prix:850,coutRemplacement:900,os:"Windows 10"}),
+    base({id:"d2",numero:"CSA-PCF-001",categorie:"Ordinateur de bureau",marque:"Dell",modele:"OptiPlex 7010",serie:"7HJ2K93",site:"CSAmblève (Aywaille)",local:"Secrétariat",utilisateur:"Secrétariat",dateAchat:y(4.4),prix:780,coutRemplacement:800,os:"Windows 11"}),
+    base({id:"d3",numero:"CSA-IMP-001",categorie:"Imprimante",marque:"Canon",modele:"imageRUNNER C3226",site:"CSAmblève (Aywaille)",local:"Couloir rez",acquisition:"Leasing",finContrat:y(-0.6),statut:"En service"}),
+    base({id:"d4",numero:"CSR-ECR-001",categorie:"Écran",marque:"Iiyama",modele:"ProLite 24\"",site:"CSR (Comblain-au-Pont)",local:"Consultation 1",dateAchat:y(0.3),prix:160,coutRemplacement:170}),
+    base({id:"d5",numero:"CSA-SOU-001",categorie:"Souris",marque:"Logitech",modele:"M185 (lot)",site:"CSAmblève (Aywaille)",local:"Stock",quantite:6,statut:"En stock",dateAchat:y(1),prix:25,coutRemplacement:25}),
+    base({id:"d6",numero:"CSA-PCP-002",categorie:"Ordinateur portable",marque:"HP",modele:"ProBook 450 G8",site:"CSAmblève (Aywaille)",local:"Médecins",utilisateur:"Dr …",dateAchat:y(3.2),prix:920,coutRemplacement:950,os:"Windows 11",statut:"En panne"})
+  ];
+}
+
+/* ---------- Rendu ---------- */
+let sortKey = "numero", sortDir = 1;
+
+function render(){ renderDash(); renderInv(); renderLabels(); }
+
+function renderDash(){
+  const act = items.filter(active);
+  $("#kTotal").textContent = act.filter(i=>i.statut==="En service").reduce((s,i)=>s+(Number(i.quantite)||1),0);
+  $("#kLate").textContent = act.filter(i=>echState(i)==="late").length;
+  $("#kSoon").textContent = act.filter(i=>echState(i)==="soon").length;
+  $("#kPanne").textContent = act.filter(i=>i.statut==="En panne"||i.statut==="En réparation").length;
+  $("#kW10").textContent = act.filter(i=>i.os==="Windows 10").length;
+  $("#kNoDate").textContent = act.filter(i=>!echeance(i)).length;
+
+  // Budget par année (les retards sont reportés sur l'année en cours)
+  const cy = new Date().getFullYear(), bud = {};
+  act.forEach(i=>{
+    const e = echeance(i); if(!e) return;
+    let yr = Math.max(cy, Number(e.slice(0,4)));
+    const c = (Number(i.coutRemplacement)||Number(i.prix)||0)*(Number(i.quantite)||1);
+    bud[yr] = bud[yr]||{c:0,n:0}; bud[yr].c += c; bud[yr].n += 1;
+  });
+  const years = []; for(let y=cy;y<cy+6;y++) years.push(y);
+  const max = Math.max(1,...years.map(y=>bud[y]?.c||0));
+  $("#budget").innerHTML = years.map(y=>`<div class="bar"><span class="y">${y}</span><span class="t"><i style="width:${((bud[y]?.c||0)/max*100).toFixed(1)}%"></i></span><span class="v">${fmtE(bud[y]?.c||0)} · ${bud[y]?.n||0} app.</span></div>`).join("")
+    + `<p style="color:var(--muted);font-size:12px;margin:10px 0 0">Basé sur le coût de remplacement (ou le prix d'achat). Les échéances dépassées sont comptées sur ${cy}.</p>`;
+
+  const bc = {}; act.forEach(i=>{ bc[i.categorie]=(bc[i.categorie]||0)+(Number(i.quantite)||1); });
+  const mx = Math.max(1,...Object.values(bc));
+  $("#byCat").innerHTML = Object.keys(CATS).filter(c=>bc[c]).map(c=>`<div class="bar"><span style="width:150px">${CAT_ICON[c]} ${esc(c)}</span><span class="t"><i style="width:${bc[c]/mx*100}%"></i></span><span class="v" style="width:40px">${bc[c]}</span></div>`).join("") || '<p class="empty">Aucun appareil</p>';
+
+  const tels = act.filter(i=>i.categorie===TEL).sort((a,b)=>String(a.utilisateur||"").localeCompare(String(b.utilisateur||""),"fr"));
+  const tot = tels.reduce((s,i)=>s+(Number(i.coutAbonnement)||0),0);
+  $("#telTot").textContent = tels.length ? `· ${tels.length} appareil(s) · abonnements ${fmtE(tot)}/mois` : "";
+  $("#telTable").innerHTML = tels.length ? `<div style="overflow-x:auto"><table><thead><tr><th>Numéro d'appel</th><th>Détenteur</th><th>Téléphone</th><th>Achat</th><th>Opérateur · abonnement</th><th>€/mois</th><th>Carte SIM</th></tr></thead><tbody>${
+    tels.map(i=>`<tr class="row" onclick="openView('${i.id}')"><td class="mono">${esc(i.numeroAppel||"—")}</td><td>${esc(i.utilisateur||"—")}</td><td>${esc([i.marque,i.modele].filter(Boolean).join(" "))}<br><small class="mono" style="color:var(--muted)">${esc(i.numero)}</small></td><td>${fmtD(i.dateAchat)}</td><td>${esc([i.operateur,i.abonnement].filter(Boolean).join(" · ")||"—")}</td><td>${fmtE(i.coutAbonnement)}</td><td class="mono">${esc(i.sim||"—")}</td></tr>`).join("")
+  }</tbody></table></div>` : '<div class="card empty">Aucun téléphone portable encodé.</div>';
+
+  const next = act.filter(i=>["late","soon"].includes(echState(i))).sort((a,b)=>echeance(a).localeCompare(echeance(b)));
+  $("#nextList").innerHTML = next.length ? listHTML(next) : '<div class="card empty">Rien à renouveler dans les 12 prochains mois 👍</div>';
+}
+
+function filtered(){
+  const q = $("#fSearch").value.trim().toLowerCase();
+  const c=$("#fCat").value, s=$("#fSite").value, st=$("#fStatut").value, e=$("#fEch").value;
+  return items.filter(i=>
+    (!c||i.categorie===c) && (!s||i.site===s) && (!st||i.statut===st) && (!e||echState(i)===e) &&
+    (!q || [i.numero,i.marque,i.modele,i.serie,i.utilisateur,i.local,i.fournisseur,i.remarques,i.numeroAppel,(i.numeroAppel||"").replace(/\s/g,""),i.sim,i.imei,i.operateur,i.abonnement].join(" ").toLowerCase().includes(q))
+  ).map(i=>({...i,_ech:echeance(i)})).sort((a,b)=>String(a[sortKey]??"").localeCompare(String(b[sortKey]??""),"fr",{numeric:true})*sortDir);
+}
+
+function listHTML(arr){
+  const rows = arr.map(i=>`<tr class="row" onclick="openView('${i.id}')">
+    <td class="mono">${esc(i.numero)}</td><td>${CAT_ICON[i.categorie]||""} ${esc(i.categorie)}${i.quantite>1?` ×${i.quantite}`:""}</td>
+    <td>${esc([i.marque,i.modele].filter(Boolean).join(" "))}</td>
+    <td>${esc((SITES[i.site]||"")+(i.local?" · "+i.local:""))}</td><td>${esc(i.utilisateur||"")}${i.numeroAppel?`<br><small style="color:var(--muted)">${esc(i.numeroAppel)}</small>`:""}</td>
+    <td>${fmtD(i.dateAchat)}</td><td>${echPill(i)}</td><td>${statPill(i.statut)}</td></tr>`).join("");
+  const mob = arr.map(i=>`<div class="item" onclick="openView('${i.id}')">
+    ${i.photo?`<img src="${i.photo}" alt="">`:`<div class="ph">${CAT_ICON[i.categorie]||"📦"}</div>`}
+    <div class="tx"><b>${esc(i.numero)} · ${esc(i.modele||i.categorie)}</b><span>${esc(i.numeroAppel?i.numeroAppel+" · "+(i.utilisateur||""):(SITES[i.site]||"")+(i.local?" · "+i.local:"")+(i.utilisateur?" · "+i.utilisateur:""))}</span></div>
+    <div style="text-align:right">${echPill(i)}<br>${i.statut!=="En service"?statPill(i.statut):""}</div></div>`).join("");
+  return `<table class="desk"><tbody>${rows}</tbody></table><div class="mobile-list">${mob}</div>`;
+}
+
+function renderInv(){
+  const arr = filtered();
+  const tmp = document.createElement("div"); tmp.innerHTML = listHTML(arr);
+  $("#invBody").innerHTML = tmp.querySelector("tbody").innerHTML;
+  $("#invMobile").innerHTML = tmp.querySelector(".mobile-list").innerHTML;
+  $("#invCount").textContent = arr.length ? `${arr.length} fiche(s)` : "Aucun résultat.";
+}
+
+function renderLabels(){
+  if ($("#tab-lab").classList.contains("hidden")) return;
+  const s=$("#lSite").value, c=$("#lCat").value, w=$("#lWhich").value;
+  const week = Date.now()-7*864e5;
+  const arr = items.filter(i=>active(i)&&(!s||i.site===s)&&(!c||i.categorie===c)&&(w!=="new"||(i.creeLe||0)>week))
+    .sort((a,b)=>String(a.numero).localeCompare(String(b.numero),"fr",{numeric:true}));
+  const sheet = $("#sheet"); sheet.innerHTML = "";
+  arr.forEach(i=>{
+    const d = document.createElement("div"); d.className="lbl";
+    d.innerHTML = `<div class="qr"></div><div class="t"><b>${esc(i.numero)}</b>${esc([i.marque,i.modele].filter(Boolean).join(" "))}<br><small>Propriété du ${SITES[i.site]==="CSR"?"Centre de Santé des Roches":"Centre de Santé de l'Amblève"}<br>Scannez pour la fiche</small></div>`;
+    sheet.appendChild(d);
+    new QRCode(d.querySelector(".qr"), {text: ficheURL(i.id), width:180, height:180, correctLevel: QRCode.CorrectLevel.M});
+  });
+  if(!arr.length) sheet.innerHTML = '<p class="empty" style="grid-column:1/-1">Aucun appareil pour ces critères.</p>';
+}
+const ficheURL = id => location.origin + location.pathname + "#f=" + id;
+
+/* ---------- Fiche : affichage ---------- */
+function openModal(html){ $("#modalBox").innerHTML = html; $("#modal").classList.remove("hidden"); }
+function closeModal(){ $("#modal").classList.add("hidden"); if(location.hash) history.replaceState(null,"",location.pathname); }
+$("#modal").addEventListener("click", e=>{ if(e.target.id==="modal") closeModal(); });
+
+function openView(id){
+  const i = items.find(x=>x.id===id); if(!i) return alert("Fiche introuvable.");
+  const kv = (l,v)=>`<div><small>${l}</small>${v||"—"}</div>`;
+  const hist = (i.historique||[]).slice().reverse().map(h=>`<div><b>${esc(h.type)}</b> — ${esc(h.texte)}<br><small>${fmtD(h.date)} · ${esc(h.par||"")}</small></div>`).join("");
+  openModal(`
+    <div class="view-head">
+      ${i.photo?`<img src="${i.photo}" alt="">`:""}
+      <div style="flex:1;min-width:200px">
+        <h3>${CAT_ICON[i.categorie]||""} ${esc(i.numero)}</h3>
+        <div style="font-size:15px">${esc([i.marque,i.modele].filter(Boolean).join(" "))}${i.quantite>1?` · ${i.quantite} pièces`:""}</div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${statPill(i.statut)} ${echPill(i)}</div>
+      </div>
+    </div>
+    <div class="kv">
+      ${kv("Site",esc(i.site))}${kv("Local",esc(i.local))}${kv("Utilisateur",esc(i.utilisateur))}
+      ${kv("N° de série",`<span class="mono">${esc(i.serie||"—")}</span>`)}${i.categorie===TEL?"":kv("Système",esc(i.os))}
+      ${i.categorie===TEL?`${kv("Numéro d'appel",i.numeroAppel?`<a href="tel:${esc(i.numeroAppel.replace(/\s/g,""))}">${esc(i.numeroAppel)}</a>`:"")}${kv("IMEI",`<span class="mono">${esc(i.imei||"—")}</span>`)}
+        ${kv("Opérateur",esc(i.operateur))}${kv("Abonnement",esc(i.abonnement))}${kv("Coût mensuel",fmtE(i.coutAbonnement))}
+        ${kv("Carte SIM",`<span class="mono">${esc(i.sim||"—")}</span>`)}${kv("Code PIN / PUK",i.pin?`<span class="mono" style="cursor:pointer" onclick="this.textContent='${esc(i.pin)}'">•••• (toucher pour afficher)</span>`:"")}${kv("Fin d'engagement",fmtD(i.debutAbonnement))}`:""}
+      ${kv("Acquisition",esc(i.acquisition))}${kv("Date d'achat",fmtD(i.dateAchat))}${kv("Fournisseur",esc(i.fournisseur))}
+      ${kv("Prix d'achat",fmtE(i.prix))}${kv("N° de facture",esc(i.facture))}${kv("Fin de garantie",fmtD(i.finGarantie))}
+      ${i.acquisition!=="Achat"?kv("Fin de contrat",fmtD(i.finContrat)):kv("Durée de vie",(i.dureeVie||5)+" ans")}
+      ${kv("Coût de remplacement estimé",fmtE(i.coutRemplacement))}
+    </div>
+    ${i.remarques?`<p style="background:var(--bg);padding:10px;border-radius:9px;font-size:14px;white-space:pre-wrap">${esc(i.remarques)}</p>`:""}
+    <div class="sec" style="margin-top:16px">Historique</div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <select id="hType" style="padding:8px;border:1px solid var(--line);border-radius:9px">${HIST_TYPES.map(t=>`<option>${t}</option>`).join("")}</select>
+      <input id="hTxt" placeholder="Ex. écran ne s'allume plus, envoyé chez le fournisseur" style="flex:1;min-width:200px;padding:8px;border:1px solid var(--line);border-radius:9px">
+      <button class="btn small" onclick="addHist('${i.id}')">Ajouter</button>
+    </div>
+    <div class="hist">${hist||'<small>Aucun événement.</small>'}</div>
+    <div class="actions">
+      <button class="btn ghost left" onclick="closeModal()">Fermer</button>
+      <button class="btn ghost" onclick="openEdit('${i.id}',true)">Dupliquer</button>
+      <button class="btn" onclick="openEdit('${i.id}')">Modifier</button>
+    </div>`);
+}
+
+async function addHist(id){
+  const txt = $("#hTxt").value.trim(); if(!txt) return;
+  const i = {...items.find(x=>x.id===id)};
+  i.historique = [...(i.historique||[]), {date:todayISO(), type:$("#hType").value, texte:txt, par:currentUser}];
+  i.modifieLe = Date.now(); i.modifiePar = currentUser;
+  await store.save(i); openView(id);
+}
+
+/* ---------- Fiche : édition ---------- */
+let editPhoto = null;
+function opt(arr, v){ return arr.map(o=>`<option ${o===v?"selected":""} value="${esc(o)}">${esc(o||"—")}</option>`).join(""); }
+
+function openEdit(id, duplicate){
+  const src = id ? items.find(x=>x.id===id) : null;
+  const i = src ? {...src} : {categorie:"Ordinateur portable", site:Object.keys(SITES)[0], statut:"En service", acquisition:"Achat", dureeVie:5, quantite:1};
+  if (duplicate){ delete i.id; i.numero=""; i.serie=""; i.photo=null; i.historique=[]; i.utilisateur=""; }
+  editPhoto = i.photo || null;
+  const f = (k,l,type="text",cls="")=>`<div class="${cls}"><label>${l}</label><input id="e_${k}" type="${type}" value="${esc(i[k]??"")}" ${type==="number"?'step="any" min="0"':""}></div>`;
+  openModal(`
+    <h3>${i.id?"Modifier "+esc(i.numero):"Nouvel appareil"}</h3>
+    <div class="form">
+      <div><label>Catégorie</label><select id="e_categorie">${opt(Object.keys(CATS),i.categorie)}</select></div>
+      <div><label>Site</label><select id="e_site">${opt(Object.keys(SITES),i.site)}</select></div>
+      <div><label>N° d'inventaire</label><input id="e_numero" class="mono" value="${esc(i.numero||"")}" placeholder="Auto si vide"></div>
+      <div><label>Statut</label><select id="e_statut">${opt(STATUTS,i.statut)}</select></div>
+      ${f("marque","Marque")}${f("modele","Modèle")}
+      ${f("serie","N° de série")}
+      <div><label>Système d'exploitation</label><select id="e_os">${opt(OS,i.os||"")}</select></div>
+      ${f("local","Local / bureau")}${f("utilisateur","Utilisateur / détenteur")}
+      ${f("quantite","Quantité (lot de souris, claviers…)","number")}
+      <div class="sec tel-only">Téléphonie</div>
+      <div class="tel-only">${f("numeroAppel","Numéro d'appel","tel")}</div>
+      <div class="tel-only">${f("imei","IMEI","text")}</div>
+      <div class="tel-only"><label>Opérateur</label><select id="e_operateur">${opt(OPERATEURS,i.operateur||"")}</select></div>
+      <div class="tel-only">${f("abonnement","Type d'abonnement")}</div>
+      <div class="tel-only">${f("coutAbonnement","Coût mensuel de l'abonnement (€)","number")}</div>
+      <div class="tel-only">${f("sim","N° de carte SIM (ICCID)")}</div>
+      <div class="tel-only">${f("pin","Code PIN / PUK","text")}</div>
+      <div class="tel-only">${f("debutAbonnement","Fin d'engagement de l'abonnement","date")}</div>
+      <div class="sec">Achat et cycle de vie</div>
+      <div><label>Mode d'acquisition</label><select id="e_acquisition">${opt(ACQ,i.acquisition)}</select></div>
+      ${f("dateAchat","Date d'achat / de mise en service","date")}
+      ${f("fournisseur","Fournisseur")}${f("facture","N° de facture")}
+      ${f("prix","Prix d'achat (€)","number")}${f("finGarantie","Fin de garantie","date")}
+      <div id="w_duree">${f("dureeVie","Durée de vie (années)","number")}</div>
+      <div id="w_contrat">${f("finContrat","Fin du contrat (leasing/location)","date")}</div>
+      ${f("coutRemplacement","Coût de remplacement estimé (€)","number")}
+      <div><label>Renouvellement prévu</label><input id="e_ech" disabled></div>
+      <div class="sec">Photo et remarques</div>
+      <div class="full"><label>Photo</label><input type="file" accept="image/*" capture="environment" id="e_photo">
+        <img id="e_prev" class="photo-prev ${editPhoto?"":"hidden"}" src="${editPhoto||""}" alt="">
+        ${editPhoto?'<button class="btn ghost small" style="margin-top:6px" onclick="editPhoto=null;$(\'#e_prev\').classList.add(\'hidden\')">Retirer la photo</button>':""}</div>
+      <div class="full"><label>Remarques</label><textarea id="e_remarques" rows="3">${esc(i.remarques||"")}</textarea></div>
+    </div>
+    <div class="actions">
+      ${i.id?`<button class="btn danger left" onclick="delItem('${i.id}')">Supprimer</button>`:""}
+      <button class="btn ghost" onclick="${i.id?`openView('${i.id}')`:"closeModal()"}">Annuler</button>
+      <button class="btn" id="btnSave">Enregistrer</button>
+    </div>`);
+  const upd = ()=>{
+    const isAchat = $("#e_acquisition").value==="Achat";
+    $("#w_duree").classList.toggle("hidden",!isAchat); $("#w_contrat").classList.toggle("hidden",isAchat);
+    const e = echeance({acquisition:$("#e_acquisition").value, finContrat:$("#e_finContrat").value, dateAchat:$("#e_dateAchat").value, dureeVie:$("#e_dureeVie").value});
+    $("#e_ech").value = e ? fmtD(e) : "—";
+    const isTel = $("#e_categorie").value===TEL;
+    document.querySelectorAll(".tel-only").forEach(el=>el.classList.toggle("hidden",!isTel));
+    $("#e_os").closest("div").classList.toggle("hidden",isTel);
+  };
+  $("#e_categorie").addEventListener("input",upd);
+  ["e_acquisition","e_finContrat","e_dateAchat","e_dureeVie"].forEach(k=>$("#"+k).addEventListener("input",upd)); upd();
+  $("#e_photo").addEventListener("change", async ev=>{
+    const file = ev.target.files[0]; if(!file) return;
+    editPhoto = await compress(file); const p=$("#e_prev"); p.src=editPhoto; p.classList.remove("hidden");
+  });
+  $("#btnSave").onclick = ()=>saveEdit(i);
+}
+
+function nextNumero(site, cat){
+  const pre = (SITES[site]||"CSA")+"-"+(CATS[cat]||"AUT")+"-";
+  const nums = items.map(x=>x.numero||"").filter(n=>n.startsWith(pre)).map(n=>parseInt(n.slice(pre.length))||0);
+  return pre + String(Math.max(0,...nums)+1).padStart(3,"0");
+}
+
+async function saveEdit(orig){
+  const g = k => $("#e_"+k).value.trim();
+  const it = {...orig};
+  ["categorie","site","numero","statut","marque","modele","serie","os","local","utilisateur","acquisition","dateAchat","fournisseur","facture","finGarantie","finContrat","remarques","numeroAppel","imei","operateur","abonnement","sim","pin","debutAbonnement"].forEach(k=>it[k]=g(k));
+  ["quantite","prix","dureeVie","coutRemplacement","coutAbonnement"].forEach(k=>{ const v=g(k); it[k]= v===""?"":Number(v.replace(",",".")); });
+  if(!it.quantite) it.quantite = 1; if(!it.dureeVie) it.dureeVie = 5;
+  if(!it.numero) it.numero = nextNumero(it.site, it.categorie);
+  if(items.some(x=>x.numero===it.numero && x.id!==it.id)) return alert("Ce numéro d'inventaire existe déjà.");
+  it.photo = editPhoto || null;
+  const h = [...(it.historique||[])];
+  if(!it.id){ h.push({date:todayISO(),type:"Création",texte:"Fiche créée",par:currentUser}); it.creeLe = Date.now(); }
+  else {
+    if(orig.statut!==it.statut) h.push({date:todayISO(),type:"Statut",texte:`${orig.statut} → ${it.statut}`,par:currentUser});
+    if((orig.utilisateur||"")!==it.utilisateur) h.push({date:todayISO(),type:"Changement d'utilisateur",texte:`${orig.utilisateur||"—"} → ${it.utilisateur||"—"}`,par:currentUser});
+    if((orig.numeroAppel||"")!==it.numeroAppel && orig.numeroAppel) h.push({date:todayISO(),type:"Numéro d'appel",texte:`${orig.numeroAppel} → ${it.numeroAppel||"—"}`,par:currentUser});
+    if((orig.sim||"")!==it.sim && orig.sim) h.push({date:todayISO(),type:"Carte SIM",texte:`${orig.sim} → ${it.sim||"—"}`,par:currentUser});
+    if(((orig.operateur||"")+(orig.abonnement||""))!==(it.operateur+it.abonnement) && (orig.operateur||orig.abonnement)) h.push({date:todayISO(),type:"Abonnement",texte:`${orig.operateur||""} ${orig.abonnement||""} → ${it.operateur} ${it.abonnement}`,par:currentUser});
+    if((orig.local||"")!==it.local || orig.site!==it.site) h.push({date:todayISO(),type:"Déplacement",texte:`${SITES[orig.site]||""} ${orig.local||""} → ${SITES[it.site]||""} ${it.local}`,par:currentUser});
+  }
+  it.historique = h; it.modifieLe = Date.now(); it.modifiePar = currentUser;
+  $("#btnSave").disabled = true; $("#btnSave").textContent = "Enregistrement…";
+  try { const id = await store.save(it); openView(id); }
+  catch(e){ alert("Échec de l'enregistrement : "+e.message); $("#btnSave").disabled=false; $("#btnSave").textContent="Enregistrer"; }
+}
+
+async function delItem(id){
+  const i = items.find(x=>x.id===id);
+  if(!confirm(`Supprimer définitivement ${i.numero} ?\n\nPour un appareil mis au rebut, préfère le statut « Réformé » : l'historique est conservé.`)) return;
+  await store.remove(id); closeModal();
+}
+
+function compress(file){
+  return new Promise(res=>{
+    const img = new Image(), r = new FileReader();
+    r.onload = ()=>{ img.src = r.result; };
+    img.onload = ()=>{
+      const max=700, k=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement("canvas"); c.width=img.width*k; c.height=img.height*k;
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",0.7));
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+/* ---------- Colonnes Excel (export, modèle et import) ---------- */
+const COLS = [
+  ["numero","N° inventaire",["ninventaire","numeroinventaire","noinventaire","inventaire","ref","reference","numero","code","etiquette"]],
+  ["categorie","Catégorie",["categorie","type","typedemateriel","materiel","genre"]],
+  ["quantite","Quantité",["quantite","qte","qt","nombre","nb"]],
+  ["marque","Marque",["marque","fabricant","brand"]],
+  ["modele","Modèle",["modele","model","designation","description"]],
+  ["serie","N° de série",["ndeserie","numerodeserie","noserie","serie","sn","serialnumber","nserie","servicetag"]],
+  ["site","Site",["site","centre","implantation"]],
+  ["local","Local",["local","bureau","piece","emplacement","localisation","lieu"]],
+  ["utilisateur","Utilisateur",["utilisateur","detenteur","proprietaire","user","attribuea","personne","nom"]],
+  ["os","Système",["systeme","os","systemedexploitation","windows"]],
+  ["statut","Statut",["statut","etat"]],
+  ["acquisition","Acquisition",["acquisition","modedacquisition"]],
+  ["dateAchat","Date d'achat",["datedachat","dateachat","achat","date","miseenservice","datemiseenservice","dateacquisition"]],
+  ["fournisseur","Fournisseur",["fournisseur","vendeur","revendeur"]],
+  ["facture","N° facture",["nfacture","numerofacture","nodefacture","facture"]],
+  ["prix","Prix d'achat",["prixdachat","prix","montant","prixachat","prixhtva","prixtvac"]],
+  ["finGarantie","Fin de garantie",["findegarantie","garantie","garantiejusquau"]],
+  ["dureeVie","Durée de vie (ans)",["dureedevieans","dureedevie","duree"]],
+  ["finContrat","Fin de contrat",["findecontrat","fincontrat","echeancecontrat"]],
+  ["_ech","Renouvellement prévu",["renouvellementprevu"]],
+  ["coutRemplacement","Coût de remplacement",["coutderemplacement","coutremplacement","budgetremplacement"]],
+  ["numeroAppel","N° d'appel",["ndappel","numerodappel","numerodetelephone","ntelephone","ntel","numerotel","telephone","gsm","numerogsm","ngsm"]],
+  ["imei","IMEI",["imei"]],
+  ["operateur","Opérateur",["operateur"]],
+  ["abonnement","Abonnement",["abonnement","typedabonnement","formule","forfait"]],
+  ["coutAbonnement","Coût abonnement (€/mois)",["coutabonnementmois","coutabonnement","prixabonnement","coutmensuel","prixmensuel"]],
+  ["sim","Carte SIM",["cartesim","sim","nsim","ndesim","iccid","numerosim","ndecartesim"]],
+  ["debutAbonnement","Fin d'engagement",["findengagement","engagement"]],
+  ["remarques","Remarques",["remarques","remarque","commentaire","commentaires","notes","note","observations","divers","info","infos"]]
+];
+const NUM_FIELDS = ["quantite","prix","dureeVie","coutRemplacement","coutAbonnement"];
+const DATE_FIELDS = ["dateAchat","finGarantie","finContrat","debutAbonnement"];
+const normKey = h => String(h).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+
+function rowFor(i){ const r={}; COLS.forEach(([k,label])=>r[label]= k==="_ech" ? echeance(i) : (i[k]??"")); return r; }
+
+$("#btnExport").onclick = ()=>{
+  const ws = XLSX.utils.json_to_sheet(filtered().map(rowFor)), wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Parc informatique");
+  XLSX.writeFile(wb, `parc-informatique-${todayISO()}.xlsx`);
+};
+
+$("#btnTemplate").onclick = ()=>{
+  const headers = COLS.filter(c=>c[0]!=="_ech").map(c=>c[1]);
+  const ex1 = {"Catégorie":"Ordinateur portable","Marque":"Lenovo","Modèle":"ThinkPad E14","N° de série":"PF3XA12","Site":"CSAmblève","Local":"Accueil","Utilisateur":"Accueil 1","Système":"Windows 11","Date d'achat":"15/03/2023","Fournisseur":"…","Prix d'achat":850};
+  const ex2 = {"Catégorie":"Téléphone portable","Marque":"Samsung","Modèle":"Galaxy A55","Site":"CSAmblève","Utilisateur":"Prénom Nom","Date d'achat":"01/09/2024","N° d'appel":"0470 12 34 56","Opérateur":"Proximus","Abonnement":"Mobile Business","Coût abonnement (€/mois)":25,"Carte SIM":"8932001234567890123"};
+  const ws = XLSX.utils.json_to_sheet([ex1,ex2],{header:headers});
+  ws["!cols"] = headers.map(h=>({wch:Math.max(12,h.length+2)}));
+  const aide = [
+    ["Colonne","Valeurs acceptées / conseils"],
+    ["Catégorie", Object.keys(CATS).join(", ")+" (les mots proches sont reconnus : laptop, PC fixe, GSM, moniteur…)"],
+    ["Site","CSAmblève ou CSR (Comblain)"],
+    ["Statut", STATUTS.join(", ")+" — vide = En service"],
+    ["Acquisition", ACQ.join(", ")+" — vide = Achat"],
+    ["Dates","jj/mm/aaaa ; une année seule (ex. 2021) est acceptée et mise au 1er janvier"],
+    ["N° inventaire","Laisser vide : il sera attribué automatiquement (ex. CSA-PCP-012)"],
+    ["N° d'appel et Carte SIM","Formater ces colonnes en TEXTE dans Excel, sinon le 0 initial et les derniers chiffres de la SIM sont perdus"],
+    ["Lots","Pour souris ou claviers identiques, une seule ligne avec la quantité"],
+    ["Mise à jour","Une ligne dont le N° inventaire ou le N° de série existe déjà met la fiche à jour au lieu d'en créer une nouvelle"]
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Matériel");
+  const wa = XLSX.utils.aoa_to_sheet(aide); wa["!cols"]=[{wch:24},{wch:110}];
+  XLSX.utils.book_append_sheet(wb, wa, "Aide");
+  XLSX.writeFile(wb, "modele-parc-informatique.xlsx");
+};
+
+/* ---------- Import Excel ---------- */
+function normCat(v){
+  const n = normKey(v); if(!n) return "";
+  for (const c of Object.keys(CATS)) if (normKey(c)===n) return c;
+  if (/portable|laptop|notebook|thinkpad|probook|latitude|elitebook|macbook/.test(n) && !/telephone|gsm|smartphone/.test(n)) return "Ordinateur portable";
+  if (/gsm|smartphone|iphone|galaxy|telephone|mobile|gsmportable/.test(n)) return "Téléphone portable";
+  if (/fixe|desktop|tour|unitecentrale|ordinateur|^pc|optiplex|minipc/.test(n)) return "Ordinateur de bureau";
+  if (/ecran|moniteur|monitor|display/.test(n)) return "Écran";
+  if (/clavier|keyboard/.test(n)) return "Clavier";
+  if (/souris|mouse/.test(n)) return "Souris";
+  if (/imprimante|printer|multifonction|copieur|photocopieur|mfp/.test(n)) return "Imprimante";
+  return null;
+}
+function normSite(v){
+  const n = normKey(v);
+  if (/roche|comblain|csr/.test(n)) return "CSR (Comblain-au-Pont)";
+  return "CSAmblève (Aywaille)";
+}
+function pick(list, v, def){
+  const n = normKey(v); if(!n) return def;
+  return list.find(x=>normKey(x)===n) || list.find(x=>x && normKey(x).startsWith(n.slice(0,5))) || def;
+}
+function toISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function normDate(v, warn){
+  if (v===""||v==null) return "";
+  if (v instanceof Date && !isNaN(v)) return toISO(new Date(v.getTime()+12*3600e3));
+  if (typeof v==="number"){
+    if (v>1900 && v<2100){ warn("année seule, mise au 1er janvier"); return `${v}-01-01`; }
+    const d = XLSX.SSF.parse_date_code(v); if(d) return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`;
+  }
+  const t = String(v).trim();
+  let m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+  if (m){ let y=+m[3]; if(y<100) y+=2000; return `${y}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`; }
+  m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = t.match(/^(\d{4})$/); if (m){ warn("année seule, mise au 1er janvier"); return `${m[1]}-01-01`; }
+  m = t.match(/^(\d{1,2})[\/.\-](\d{4})$/); if (m){ warn("mois seul, mis au 1er du mois"); return `${m[2]}-${String(m[1]).padStart(2,"0")}-01`; }
+  warn(`date illisible « ${t} » ignorée`); return "";
+}
+function normNum(v){
+  if (v===""||v==null) return "";
+  if (typeof v==="number") return v;
+  const n = parseFloat(String(v).replace(/[^\d,.\-]/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",","."));
+  return isNaN(n) ? "" : n;
+}
+
+let importPlan = null;
+$("#btnImport").onclick = ()=>$("#fileImport").click();
+$("#fileImport").addEventListener("change", async ev=>{
+  const file = ev.target.files[0]; ev.target.value=""; if(!file) return;
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), {cellDates:true});
+    const sheetName = wb.SheetNames.find(n=>!/aide|help|liste|param/i.test(n)) || wb.SheetNames[0];
+    let raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:"", raw:true});
+    // Si la première ligne n'est pas l'en-tête, chercher la ligne d'en-tête dans les 10 premières
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:"", raw:true});
+    const known = new Set(COLS.flatMap(c=>c[2]));
+    let hdrRow = 0, best = -1;
+    aoa.slice(0,10).forEach((r,ix)=>{ const sc=r.filter(c=>known.has(normKey(c))).length; if(sc>best){best=sc;hdrRow=ix;} });
+    if (hdrRow>0) raw = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:"", raw:true, range:hdrRow});
+    buildImportPlan(raw, file.name, sheetName);
+  }catch(e){ alert("Impossible de lire ce fichier : "+e.message); }
+});
+
+function buildImportPlan(raw, fname, sheetName){
+  const headers = raw.length ? Object.keys(raw[0]) : [];
+  const map = {}, used = new Set(), ignored = [];
+  headers.forEach(h=>{
+    const n = normKey(h);
+    const col = COLS.find(c=>c[2].includes(n) && !used.has(c[0]));
+    if (col && col[0]!=="_ech"){ map[h]=col[0]; used.add(col[0]); }
+    else if (!col || col[0]!=="_ech") { if(String(h).trim() && !/^__EMPTY/.test(h)) ignored.push(h); }
+  });
+  const warnings = [], rows = [];
+  const work = items.map(x=>({...x}));            // pour numérotation et doublons
+  const assigned = new Set(work.map(x=>x.numero));
+  let created=0, updated=0, skipped=0;
+
+  raw.forEach((r, ix)=>{
+    const line = (r.__rowNum__!=null ? r.__rowNum__ : ix+1) + 1;
+    const w = msg => warnings.push(`Ligne ${line} : ${msg}`);
+    const it = {};
+    for (const [h,k] of Object.entries(map)){
+      let v = r[h];
+      if (typeof v==="string") v = v.trim();
+      if (DATE_FIELDS.includes(k)) v = normDate(v, m=>w(`${h} — ${m}`));
+      else if (NUM_FIELDS.includes(k)) v = normNum(v);
+      else if (v instanceof Date) v = toISO(v);
+      else v = v===""||v==null ? "" : String(v);
+      it[k] = v;
+    }
+    if (!Object.values(it).some(v=>v!=="" && v!=null)) return; // ligne vide
+    if (!it.categorie && !it.modele && !it.marque && !it.serie && !it.numero){ skipped++; w("ignorée (ni catégorie, ni marque, ni modèle, ni série)"); return; }
+
+    const cat = normCat(it.categorie);
+    if (cat===null){ w(`catégorie « ${it.categorie} » inconnue → « Autre »`); it.categorie="Autre"; }
+    else it.categorie = cat || (it.numeroAppel||it.sim ? TEL : "Autre");
+    if (!cat && cat!==null && !it.numeroAppel && !it.sim) w("catégorie vide → « Autre »");
+    it.site = normSite(it.site||"");
+    it.statut = pick(STATUTS, it.statut, "En service");
+    it.acquisition = pick(ACQ, it.acquisition, "Achat");
+    if (it.os) it.os = pick(OS, it.os, "Autre");
+    if (it.numeroAppel && /^\d{8,9}$/.test(it.numeroAppel)) { it.numeroAppel = "0"+it.numeroAppel; w("0 initial du n° d'appel rétabli"); }
+    if (it.sim && /e\+/i.test(it.sim)) w("n° de carte SIM tronqué par Excel (format scientifique) — à corriger dans la fiche");
+    if (it.sim && /^\d{17,}$/.test(it.sim) && /0{3,}$/.test(it.sim) && typeof r[Object.keys(map).find(h=>map[h]==="sim")]==="number") w("n° de carte SIM probablement arrondi par Excel — vérifie les derniers chiffres");
+    if (!it.dateAchat && !(it.acquisition!=="Achat" && it.finContrat)) w("pas de date d'achat → échéance inconnue");
+
+    // Existe déjà ? (par N° inventaire puis N° de série)
+    let ex = (it.numero && work.find(x=>x.numero===it.numero)) || (it.serie && work.find(x=>x.serie && normKey(x.serie)===normKey(it.serie)));
+    const dupInFile = rows.find(x=>(it.serie && x.it.serie && normKey(x.it.serie)===normKey(it.serie)) || (it.numero && x.it.numero===it.numero));
+    if (dupInFile){ w(`doublon dans le fichier (même ${it.numero&&dupInFile.it.numero===it.numero?"N° inventaire":"N° de série"} que la ligne ${dupInFile.line}) — ignorée`); skipped++; return; }
+
+    if (ex){
+      updated++;
+      rows.push({line, it, existingId: ex.id, label: ex.numero});
+    } else {
+      if (!it.numero || assigned.has(it.numero)){
+        if (it.numero) w(`N° inventaire ${it.numero} déjà utilisé → nouveau numéro attribué`);
+        const pre = (SITES[it.site]||"CSA")+"-"+(CATS[it.categorie]||"AUT")+"-";
+        const nums = [...assigned].filter(n=>n && n.startsWith(pre)).map(n=>parseInt(n.slice(pre.length))||0);
+        it.numero = pre + String(Math.max(0,...nums)+1).padStart(3,"0");
+      }
+      assigned.add(it.numero); work.push({...it});
+      created++;
+      rows.push({line, it, existingId:null, label: it.numero});
+    }
+  });
+
+  importPlan = rows;
+  const recog = Object.entries(map).map(([h,k])=>`<span title="${esc(k)}">${esc(h)} → ${esc(COLS.find(c=>c[0]===k)[1])}</span>`).join("");
+  const prevCols = ["numero","categorie","marque","modele","serie","site","utilisateur","dateAchat","numeroAppel","sim"];
+  const prev = rows.slice(0,15).map(r=>`<tr><td>${r.existingId?'<span class="pill p-orange">MAJ</span>':'<span class="pill p-green">Nouveau</span>'}</td>${prevCols.map(k=>`<td>${k==="dateAchat"?fmtD(r.it[k]):k==="numero"?esc(r.label||""):esc(k==="site"?SITES[r.it.site]:r.it[k]??"")}</td>`).join("")}</tr>`).join("");
+  const uniqWarn = warnings.slice(0,40);
+  openModal(`
+    <h3>Import de « ${esc(fname)} »</h3>
+    <p style="color:var(--muted);font-size:13px;margin:2px 0 0">Feuille « ${esc(sheetName)} » · ${raw.length} ligne(s) lue(s)</p>
+    <div class="grid kpis" style="margin-top:14px">
+      <div class="card kpi" style="box-shadow:none;border:1px solid var(--line)"><div class="n" style="color:var(--green)">${created}</div><div class="l">Nouvelles fiches</div></div>
+      <div class="card kpi" style="box-shadow:none;border:1px solid var(--line)"><div class="n" style="color:var(--orange)">${updated}</div><div class="l">Fiches mises à jour</div></div>
+      <div class="card kpi" style="box-shadow:none;border:1px solid var(--line)"><div class="n" style="color:var(--muted)">${skipped}</div><div class="l">Lignes ignorées</div></div>
+    </div>
+    <div class="sec" style="margin-top:14px">Colonnes reconnues</div>
+    <div class="chips" style="margin-top:6px">${recog||"<em>Aucune — vérifie que la première ligne contient bien les titres de colonnes.</em>"}</div>
+    ${ignored.length?`<div style="font-size:12px;color:var(--muted);margin-top:8px">Non reprises :</div><div class="chips off">${ignored.map(h=>`<span>${esc(h)}</span>`).join("")}</div>`:""}
+    ${uniqWarn.length?`<div class="warn"><b>${warnings.length} point(s) d'attention</b><ul>${uniqWarn.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${warnings.length>40?`<div>… et ${warnings.length-40} autre(s).</div>`:""}</div>`:""}
+    ${rows.length?`<div class="sec" style="margin-top:14px">Aperçu${rows.length>15?" (15 premières)":""}</div>
+    <div class="prev-wrap"><table><thead><tr><th></th><th>N°</th><th>Catégorie</th><th>Marque</th><th>Modèle</th><th>Série</th><th>Site</th><th>Utilisateur</th><th>Achat</th><th>N° d'appel</th><th>SIM</th></tr></thead><tbody>${prev}</tbody></table></div>`:""}
+    ${updated?`<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px"><input type="checkbox" id="impOverwrite"> Remplacer aussi les champs déjà remplis dans les fiches existantes <span style="color:var(--muted);font-size:12px">(sinon seuls les champs vides sont complétés)</span></label>`:""}
+    <div class="actions">
+      <button class="btn ghost left" onclick="closeModal()">Annuler</button>
+      <button class="btn" id="btnDoImport" ${rows.length?"":"disabled"}>Importer ${rows.length} ligne(s)</button>
+    </div>`);
+  const b = $("#btnDoImport"); if (b) b.onclick = runImport;
+}
+
+async function runImport(){
+  if (!importPlan || !importPlan.length) return;
+  const overwrite = $("#impOverwrite")?.checked;
+  const btn = $("#btnDoImport"); btn.disabled = true;
+  const now = Date.now(), toSave = [];
+  for (const r of importPlan){
+    if (r.existingId){
+      const cur = {...items.find(x=>x.id===r.existingId)};
+      const changed = [];
+      for (const [k,v] of Object.entries(r.it)){
+        if (v===""||v==null) continue;
+        if (k==="numero") continue;
+        if (overwrite || cur[k]===undefined || cur[k]==="" || cur[k]==null){
+          if (String(cur[k]??"")!==String(v)){ cur[k]=v; changed.push(k); }
+        }
+      }
+      if (!changed.length) continue;
+      cur.historique = [...(cur.historique||[]), {date:todayISO(), type:"Import Excel", texte:`${changed.length} champ(s) mis à jour`, par:currentUser}];
+      cur.modifieLe = now; cur.modifiePar = currentUser;
+      toSave.push(cur);
+    } else {
+      const it = {quantite:1, dureeVie:5, ...r.it};
+      if (!it.quantite) it.quantite = 1; if (!it.dureeVie) it.dureeVie = 5;
+      it.historique = [{date:todayISO(), type:"Création", texte:"Importé depuis Excel", par:currentUser}];
+      it.creeLe = now; it.modifieLe = now; it.modifiePar = currentUser;
+      toSave.push(it);
+    }
+  }
+  try{
+    let done = 0;
+    for (let k=0; k<toSave.length; k+=400){
+      const chunk = toSave.slice(k,k+400);
+      await store.saveMany(chunk);
+      done += chunk.length; btn.textContent = `Import… ${done}/${toSave.length}`;
+    }
+    importPlan = null;
+    openModal(`<h3>Import terminé ✓</h3><p>${toSave.length} fiche(s) enregistrée(s).</p>
+      <p style="color:var(--muted);font-size:13px">Prochaine étape : onglet « Étiquettes », choisis « Créés ces 7 derniers jours » et imprime les QR codes.</p>
+      <div class="actions"><button class="btn ghost" onclick="closeModal()">Fermer</button><button class="btn" onclick="closeModal();$('#lWhich').value='new';switchTab('lab')">Voir les étiquettes</button></div>`);
+  }catch(e){ alert("L'import s'est arrêté : "+e.message+"\n\nLes lignes déjà envoyées sont enregistrées ; tu peux relancer l'import, les doublons seront reconnus."); btn.disabled=false; btn.textContent="Réessayer"; }
+}
+
+/* ---------- Scanner ---------- */
+let scanner = null;
+$("#btnScanStart").onclick = async ()=>{
+  scanner = scanner || new Html5Qrcode("reader");
+  try{
+    await scanner.start({facingMode:"environment"},{fps:10,qrbox:230}, txt=>{
+      const m = txt.match(/#f=([\w-]+)/);
+      stopScan();
+      if(m) openView(m[1]);
+      else { switchTab("inv"); $("#fSearch").value = txt; renderInv(); }
+    });
+    $("#btnScanStart").classList.add("hidden"); $("#btnScanStop").classList.remove("hidden");
+  }catch(e){ alert("Impossible d'accéder à la caméra : "+e); }
+};
+async function stopScan(){
+  if(scanner && scanner.isScanning) await scanner.stop();
+  $("#btnScanStart").classList.remove("hidden"); $("#btnScanStop").classList.add("hidden");
+}
+$("#btnScanStop").onclick = stopScan;
+
+/* ---------- Navigation ---------- */
+function switchTab(t){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
+  ["dash","inv","scan","lab"].forEach(k=>$("#tab-"+k).classList.toggle("hidden",k!==t));
+  $("#fab").classList.toggle("hidden", t==="lab"||t==="scan");
+  if(t!=="scan") stopScan();
+  if(t==="lab") renderLabels();
+}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+$("#fab").onclick = ()=>openEdit(null);
+["#fSearch","#fCat","#fSite","#fStatut","#fEch"].forEach(s=>$(s).addEventListener("input",renderInv));
+["#lSite","#lCat","#lWhich"].forEach(s=>$(s).addEventListener("input",renderLabels));
+document.querySelectorAll("th[data-s]").forEach(th=>th.onclick=()=>{ const k=th.dataset.s; sortDir = sortKey===k?-sortDir:1; sortKey=k; renderInv(); });
+
+fill("#fCat",Object.keys(CATS)); fill("#lCat",Object.keys(CATS));
+fill("#fSite",Object.keys(SITES)); fill("#lSite",Object.keys(SITES));
+fill("#fStatut",STATUTS);
+
+let hashDone = "";
+function checkHash(){
+  const m = location.hash.match(/f=([\w-]+)/);
+  if(m && m[1]!==hashDone && items.some(x=>x.id===m[1])){ hashDone=m[1]; openView(m[1]); }
+}
+window.addEventListener("hashchange", ()=>{ hashDone=""; checkHash(); });
+
+/* ---------- Démarrage ---------- */
+if (DEMO){
+  $("#app").classList.remove("hidden"); $("#demoBanner").classList.remove("hidden");
+  store.start(); checkHash();
+} else {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth(); db = firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+  auth.onAuthStateChanged(u=>{
+    if(u){
+      currentUser = u.email; $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+      $("#btnLogout").classList.remove("hidden"); store.start();
+    } else {
+      if(unsub) unsub(); items=[];
+      $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); $("#btnLogout").classList.add("hidden"); setSync("Hors ligne");
+    }
+  });
+  $("#lgBtn").onclick = ()=>{
+    $("#lgErr").textContent="";
+    auth.signInWithEmailAndPassword($("#lgEmail").value.trim(), $("#lgPass").value)
+      .catch(e=>{
+        const c=e.code||"";
+        $("#lgErr").textContent =
+          /invalid-credential|wrong-password|user-not-found|invalid-email/.test(c) ? "E-mail ou mot de passe incorrect." :
+          /too-many-requests/.test(c) ? "Trop de tentatives. Réessaie dans quelques minutes." :
+          /unauthorized-domain/.test(c) ? "Ce site n'est pas autorisé dans Firebase (Authentication > Paramètres > Domaines autorisés)." :
+          /api-key|configuration-not-found|operation-not-allowed/.test(c) ? "Configuration Firebase incomplète ("+c+"). Vérifie la clé API et que la connexion E-mail/Mot de passe est activée." :
+          /network/.test(c) ? "Pas de connexion internet." : "Erreur : "+c;
+      });
+  };
+  $("#lgReset").onclick = e=>{
+    e.preventDefault(); const em=$("#lgEmail").value.trim();
+    if(!em){ $("#lgErr").textContent="Indique d'abord ton adresse e-mail."; return; }
+    auth.sendPasswordResetEmail(em).then(()=>{ $("#lgErr").style.color="var(--green)"; $("#lgErr").textContent="E-mail de réinitialisation envoyé (vérifie aussi les indésirables)."; })
+      .catch(()=>{ $("#lgErr").textContent="Envoi impossible, vérifie l'adresse."; });
+  };
+  $("#lgPass").addEventListener("keydown",e=>{ if(e.key==="Enter") $("#lgBtn").click(); });
+  $("#btnLogout").onclick = ()=>auth.signOut();
+}
+</script>
+</body>
+</html>
